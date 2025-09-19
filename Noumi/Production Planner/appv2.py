@@ -215,11 +215,35 @@ def generate_timeline(df):
         product_y_positions[product_name] = y_pos
         product_order.append(product_name)
         for _, task in group.iterrows():
-            ax.broken_barh([(task['start'], task['end'] - task['start'])], (y_pos - 0.4, 0.8),
-                           facecolors=colors[task['task']], edgecolor='black')
-            # Add vertical lines from the start and end of each task
-            ax.vlines(task['start'], ymin=-0.5, ymax=y_pos + 0.4, color='gray', linestyle='-', linewidth=0.5, alpha=0.5)
-            ax.vlines(task['end'], ymin=-0.5, ymax=y_pos + 0.4, color='gray', linestyle='-', linewidth=0.5, alpha=0.5)
+            start_num = mdates.date2num(task["start"])
+            end_num = mdates.date2num(task["end"])
+            duration = end_num - start_num
+
+            # draw the bar
+            ax.broken_barh(
+                [(start_num, duration)],
+                (y_pos - 0.4, 0.8),
+                facecolors=colors[task["task"]],
+                edgecolor="black",
+            )
+
+            # pick label color based on task
+            if task["task"] == "wash":
+                label_color = "yellow"   # standout color for wash
+            else:
+                label_color = "white"
+
+            # add label with start-end time
+            ax.text(
+                start_num + duration / 2,
+                y_pos,
+                f"{task['start'].strftime('%H:%M')}–{task['end'].strftime('%H:%M')}",
+                ha="center",
+                va="center",
+                fontsize=8,
+                color=label_color,
+                fontweight="bold",
+            )
         y_pos += 1
 
     # Set up the plot aesthetics
