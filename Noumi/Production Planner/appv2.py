@@ -214,7 +214,7 @@ def generate_timeline(df):
         group = tasks_df[tasks_df['product'] == product_name].sort_values(by='start')
         product_y_positions[product_name] = y_pos
         product_order.append(product_name)
-        for _, task in group.iterrows():
+    for _, task in group.iterrows():
             start_num = mdates.date2num(task["start"])
             end_num = mdates.date2num(task["end"])
             duration = end_num - start_num
@@ -227,13 +227,15 @@ def generate_timeline(df):
                 edgecolor="black",
             )
 
-            # pick label color based on task
+            # choose text color for readability
             if task["task"] == "wash":
-                label_color = "yellow"   # standout color for wash
-            else:
-                label_color = "white"
+                label_color = "yellow"
+            elif task["task"] == "processing":
+                label_color = "black"
+            else:  # changeover
+                label_color = "black"
 
-            # add label with start-end time
+            # add label with start–end time
             ax.text(
                 start_num + duration / 2,
                 y_pos,
@@ -244,6 +246,7 @@ def generate_timeline(df):
                 color=label_color,
                 fontweight="bold",
             )
+
         y_pos += 1
 
     # Set up the plot aesthetics
