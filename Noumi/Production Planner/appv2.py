@@ -233,7 +233,7 @@ def generate_timeline(df):
     ax.xaxis.set_minor_locator(mdates.HourLocator(interval=3))
     ax.xaxis.set_minor_formatter(mdates.DateFormatter('%H:%M'))
 
-    # Add vertical lines for day divisions
+    # Add vertical lines for day divisions and time labels
     if not tasks_df.empty:
         first_date = tasks_df['start'].min().floor('D')
         last_date = tasks_df['end'].max().ceil('D')
@@ -242,6 +242,14 @@ def generate_timeline(df):
         for day in range(delta_days):
             day_start = first_date + timedelta(days=day)
             ax.axvline(day_start, color='gray', linestyle='--', linewidth=1, alpha=0.6)
+
+    # Add time labels for each task start and end time
+    if not tasks_df.empty:
+        for _, task in tasks_df.iterrows():
+            ax.text(mdates.date2num(task['start']), -0.1, task['start'].strftime('%H:%M'), 
+                   rotation=90, va='top', ha='right', fontsize=8, fontweight='bold')
+            ax.text(mdates.date2num(task['end']), -0.1, task['end'].strftime('%H:%M'), 
+                   rotation=90, va='top', ha='right', fontsize=8, fontweight='bold')
 
     # Rotate date labels for better readability
     plt.xticks(rotation=90, ha='right', va='top')
