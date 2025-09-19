@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import matplotlib.dates as mdates
 import streamlit as st
 import io
+import matplotlib.patheffects as path_effects
 
 def generate_timeline(df):
     """
@@ -39,16 +40,7 @@ def generate_timeline(df):
         wash_gap_mins = int(df.loc[0, 'Gap'])
         wash_duration = timedelta(minutes=wash_duration_mins)
         gap_duration = timedelta(minutes=wash_gap_mins)
-    except KeyError as e:
-        st.warning(f"⚠️ Missing wash column: {e}. Wash cycle will not be scheduled.")
-        wash_duration = timedelta(0)
-        gap_duration = timedelta(0)
-    except ValueError as e:
-        st.warning(f"⚠️ Error converting wash duration/gap: {e}. Wash cycle will not be scheduled.")
-        wash_duration = timedelta(0)
-        gap_duration = timedelta(0)
-    except Exception as e:
-        st.warning(f"⚠️ Error reading wash time: {e}. Wash cycle will not be scheduled.")
+    except Exception:
         wash_duration = timedelta(0)
         gap_duration = timedelta(0)
 
@@ -57,11 +49,7 @@ def generate_timeline(df):
     try:
         first_wash_time = pd.to_datetime(df.loc[0, 'First Wash Time'])
         last_wash_end_time = first_wash_time
-    except KeyError:
-        st.info("ℹ️ 'First Wash Time' column not found. Scheduling based on 'Date from' + 'Gap'.")
-        last_wash_end_time = start_time_of_week
-    except Exception as e:
-        st.warning(f"⚠️ Error reading 'First Wash Time': {e}. Scheduling based on 'Date from' + 'Gap'.")
+    except Exception:
         last_wash_end_time = start_time_of_week
 
     if first_wash_time and wash_duration > timedelta(0):
@@ -205,18 +193,32 @@ def generate_timeline(df):
         product_y_positions[product_name] = y_pos
         product_order.append(product_name)
         for _, task in group.iterrows():
+            start, end = task['start'], task['end']
             ax.broken_barh(
-                [(mdates.date2num(task['start']), (task['end'] - task['start']).total_seconds() / (24*3600))],
+                [(mdates.date2num(start), (end - start).total_seconds() / (24*3600))],
                 (y_pos - 0.4, 0.8),
                 facecolors=colors[task['task']], edgecolor='black'
             )
+
+            # Add outlined text with times inside the block
+            mid_time = start + (end - start) / 2
+            label = f"{start.strftime('%H:%M')} - {end.strftime('%H:%M')}"
+            text = ax.text(
+                mdates.date2num(mid_time),
+                y_pos,
+                label,
+                ha='center', va='center',
+                fontsize=9, color='white',
+                weight='bold'
+            )
+            text.set_path_effects([path_effects.Stroke(linewidth=2, foreground='black'), path_effects.Normal()])
+
         y_pos += 1
 
     ax.set_yticks(list(product_y_positions.values()))
     ax.set_yticklabels(product_order)
     ax.set_xlabel("⏰ Time")
     ax.set_title("📊 Weekly Production Plan Timeline")
-    ax.grid(False)  # we'll specify grids explicitly
     ax.invert_yaxis()
 
     # X-axis formatting
@@ -225,24 +227,20 @@ def generate_timeline(df):
     ax.xaxis.set_minor_locator(mdates.HourLocator(interval=6))
     ax.xaxis.set_minor_formatter(mdates.DateFormatter('%H:%M'))
 
-    # Add alternating day shading and stronger day dividers
+    # Shading & dividers
     if not tasks_df.empty:
         first_date = tasks_df['start'].min().floor('D')
         last_date = tasks_df['end'].max().ceil('D')
         delta_days = (last_date - first_date).days + 1
         for day in range(delta_days):
             day_start = first_date + timedelta(days=day)
-            # subtle alternating background to help visually separate days
             if day % 2 == 0:
                 ax.axvspan(day_start, day_start + timedelta(days=1), facecolor='lightgray', alpha=0.12, zorder=0)
-            # stronger vertical day divider
             ax.axvline(day_start, color='black', linestyle='--', linewidth=1.0, alpha=0.8, zorder=2)
 
-    # Clearer grid lines
     ax.grid(True, which='major', color='black', linestyle='--', linewidth=0.9, alpha=0.5)
     ax.grid(True, which='minor', color='lightgray', linestyle=':', linewidth=0.6, alpha=0.9)
 
-    # Rotate date labels for readability
     plt.xticks(rotation=45, ha='right', va='top')
     plt.setp(ax.get_xminorticklabels(), rotation=45, ha='right', va='top')
 
@@ -284,22 +282,8 @@ def main():
             
             if missing_columns:
                 st.error(f"❌ Missing required columns: {', '.join(missing_columns)}")
-                st.write("**Required columns:**")
-                for col in required_columns:
-                    status = "✅" if col in df.columns else "❌"
-                    st.write(f"{status} {col}")
-                st.write("**Optional columns:**")
-                for col in optional_columns:
-                    status = "✅" if col in df.columns else "⚪"
-                    st.write(f"{status} {col}")
             else:
                 st.success("✅ All required columns found!")
-                
-                for col in optional_columns:
-                    if col in df.columns:
-                        st.info(f"Optional column '{col}' found - will be used for scheduling.")
-                    else:
-                        st.info(f"Optional column '{col}' not found - scheduling will default to 'Date from' + 'Gap'.")
                 
                 if st.button("🚀 Generate Timeline", type="primary"):
                     with st.spinner("⏳ Generating timeline..."):
@@ -326,17 +310,6 @@ def main():
             st.error(f"❌ Error reading file: {str(e)}")
     else:
         st.info("👆 Please upload a file to get started.")
-        
-        with st.expander("📄 Expected File Format"):
-            st.write("Your file should contain the following columns:")
-            st.write("**Required columns:**")
-            required_cols = ['product name', 'quantity liters', 'process speed per hour',
-                           'line efficiency', 'Change Over', 'Date from', 'Duration', 'Gap']
-            for i, col in enumerate(required_cols, 1):
-                st.write(f"{i}. **{col}**")
-            
-            st.write("**Optional columns:**")
-            st.write("9. **First Wash Time** - If provided, will schedule the first wash at this specific time")
 
 if __name__ == "__main__":
     main()
