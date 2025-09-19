@@ -233,6 +233,7 @@ def main():
             # Check required columns
             required_columns = ['product name', 'quantity liters', 'process speed per hour',
                               'line efficiency', 'Change Over', 'Date from', 'Duration', 'Gap']
+
             
             missing_columns = [col for col in required_columns if col not in df.columns]
             
