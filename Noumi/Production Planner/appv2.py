@@ -247,7 +247,7 @@ def generate_timeline(df):
                 fontweight="bold",
             )
 
-        y_pos += 1
+    y_pos += 1
 
     # Set up the plot aesthetics
     ax.set_yticks(list(product_y_positions.values()))
