@@ -1,6 +1,3 @@
-#pip install streamlit pandas numpy matplotlib openpyxl pytz
-#test
-#test 
 import streamlit as st
 import io
 import math
@@ -12,7 +9,7 @@ import matplotlib.dates as mdates
 from datetime import timedelta, datetime
 import pytz
 import textwrap
-#testest
+
 def normalize_columns(df):
     """Standardize column names to lower-case with spaces."""
     df = df.copy()
@@ -421,7 +418,12 @@ def plot_schedule(segments, batch_marks, chart_title_from_data):
 
     ax.set_ylabel('Product (sequence as given)')
     ax.set_xlabel('Time & Day')
-    ax.set_title(chart_title_from_data, fontsize=16, fontweight='bold')
+    
+    # Add creation date to title in format: dd mmm yy
+    sydney_tz = pytz.timezone('Australia/Sydney')
+    creation_date = datetime.now(sydney_tz).strftime('%d %b %y')
+    title_with_date = f"{chart_title_from_data} - {creation_date}"
+    ax.set_title(title_with_date, fontsize=16, fontweight='bold')
 
     legend_patches = [patches.Patch(color=colors[k], label=k.title()) for k in ['production','full wash','changeover']]
     ax.legend(handles=legend_patches, loc='upper left', bbox_to_anchor=(1.02, 1), fontsize=8, frameon=True)
